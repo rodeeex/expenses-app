@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -12,9 +12,27 @@ from src.models.enums import ExpenseCategory, PaymentMethod
 class ExpenseBase(BaseModel):
     category: ExpenseCategory
     payment_method: PaymentMethod
-    amount: float = Field(..., gt=0, le=1_000_000)
-    date: date
-    comment: Optional[str] = Field(None, max_length=500)
+    amount: float
+    date: Optional[datetime.date] = None
+    comment: Optional[str] = None
+
+    @field_validator("date", mode="before")
+    @classmethod
+    def parse_date(cls, v):
+        if isinstance(v, datetime.date):
+            return v
+        if isinstance(v, str):
+            try:
+                return datetime.date.fromisoformat(v)
+            except ValueError:
+                try:
+                    d, m, y = map(int, v.split("."))
+                    return datetime.date(y, m, d)
+                except ValueError:
+                    raise ValueError(
+                        "Дата должна быть в формате YYYY-MM-DD или DD.MM.YYYY"
+                    )
+        raise ValueError("Неверный тип даты")
 
     @field_validator("comment")
     @classmethod
@@ -33,7 +51,7 @@ class ExpenseUpdate(BaseModel):
     category: Optional[ExpenseCategory] = None
     payment_method: Optional[PaymentMethod] = None
     amount: Optional[float] = Field(None, gt=0, le=1_000_000)
-    date: Optional[date] = None
+    date: Optional[datetime.date] = None
     comment: Optional[str] = Field(None, max_length=500)
 
     @field_validator("comment")
@@ -64,8 +82,12 @@ class ExpenseFilterParams(BaseModel):
     payment_method: Optional[PaymentMethod] = Field(
         None, description="Фильтр по способу оплаты"
     )
-    date_from: Optional[date] = Field(None, description="Начальная дата (включительно)")
-    date_to: Optional[date] = Field(None, description="Конечная дата (включительно)")
+    date_from: Optional[datetime.date] = Field(
+        None, description="Начальная дата (включительно)"
+    )
+    date_to: Optional[datetime.date] = Field(
+        None, description="Конечная дата (включительно)"
+    )
 
 
 class ExpenseStatisticsResponse(BaseModel):
@@ -73,8 +95,8 @@ class ExpenseStatisticsResponse(BaseModel):
 
     total_amount: float = Field(..., description="Общая сумма расходов")
     count: int = Field(..., description="Количество расходов")
-    period_start: Optional[date] = Field(None, description="Начало периода")
-    period_end: Optional[date] = Field(None, description="Конец периода")
+    period_start: Optional[datetime.date] = Field(None, description="Начало периода")
+    period_end: Optional[datetime.date] = Field(None, description="Конец периода")
     by_category: dict[str, float] = Field(
         default_factory=dict, description="Сумма по категориям"
     )

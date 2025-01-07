@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -22,40 +22,38 @@ import {
   Chip,
   Card,
   CardContent,
-} from '@mui/material';
+  InputAdornment,
+} from "@mui/material";
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-} from '@mui/icons-material';
-import { format } from 'date-fns';
-import { ru } from 'date-fns/locale/ru';
-import { expensesAPI } from '../api/expenses';
-import { useAuth } from '../hooks/useAuth';
+} from "@mui/icons-material";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale/ru";
+import { expensesAPI } from "../api/expenses";
+import { useAuth } from "../hooks/useAuth";
 
 const CATEGORIES = [
-  { value: 'food', label: 'Еда' },
-  { value: 'transport', label: 'Транспорт' },
-  { value: 'subscriptions', label: 'Подписки' },
-  { value: 'health', label: 'Здоровье' },
-  { value: 'entertainment', label: 'Развлечения' },
-  { value: 'utilities', label: 'Коммунальные услуги' },
-  { value: 'other', label: 'Другое' },
+  { value: "food", label: "Еда" },
+  { value: "transport", label: "Транспорт" },
+  { value: "subscriptions", label: "Подписки" },
+  { value: "health", label: "Здоровье" },
+  { value: "entertainment", label: "Развлечения" },
+  { value: "utilities", label: "Коммунальные услуги" },
+  { value: "other", label: "Другое" },
 ];
 
 const PAYMENT_METHODS = [
-  { value: 'cash', label: 'Наличные' },
-  { value: 'card', label: 'Карта' },
-  { value: 'other', label: 'Другое' },
+  { value: "cash", label: "Наличные" },
+  { value: "card", label: "Карта" },
+  { value: "other", label: "Другое" },
 ];
 
-const getCategoryLabel = (value) => {
-  return CATEGORIES.find(c => c.value === value)?.label || value;
-};
-
-const getPaymentMethodLabel = (value) => {
-  return PAYMENT_METHODS.find(p => p.value === value)?.label || value;
-};
+const getCategoryLabel = (value) =>
+  CATEGORIES.find((c) => c.value === value)?.label || value;
+const getPaymentMethodLabel = (value) =>
+  PAYMENT_METHODS.find((p) => p.value === value)?.label || value;
 
 export const MyExpenses = () => {
   const { user } = useAuth();
@@ -66,45 +64,67 @@ export const MyExpenses = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [expenseToDelete, setExpenseToDelete] = useState(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const [filters, setFilters] = useState({
+    category: "",
+    dateFrom: "",
+    dateTo: "",
+  });
+
   const [formData, setFormData] = useState({
-    category: 'food',
-    payment_method: 'card',
-    amount: '',
-    date: new Date().toISOString().split('T')[0],
-    comment: '',
+    category: "food",
+    payment_method: "card",
+    amount: "",
+    date: new Date().toISOString().split("T")[0],
+    comment: "",
   });
 
   useEffect(() => {
-    loadExpenses();
-    loadStatistics();
-  }, [user]);
+    if (user) loadExpenses();
+  }, [user, filters]);
 
   const loadExpenses = async () => {
     if (!user) return;
-    
     try {
       setLoading(true);
-      const data = await expensesAPI.getExpenses({ user_id: user.id });
+      const params = {
+        category: filters.category || undefined,
+        date_from: filters.dateFrom || undefined,
+        date_to: filters.dateTo || undefined,
+      };
+      const data = await expensesAPI.getExpenses(params);
       setExpenses(data);
+
+      const totalAmount = data.reduce((sum, e) => sum + e.amount, 0);
+      const byCategory = data.reduce((acc, e) => {
+        acc[e.category] = (acc[e.category] || 0) + e.amount;
+        return acc;
+      }, {});
+      const byPaymentMethod = data.reduce((acc, e) => {
+        acc[e.payment_method] = (acc[e.payment_method] || 0) + e.amount;
+        return acc;
+      }, {});
+
+      setStatistics({
+        total_amount: totalAmount,
+        count: data.length,
+        by_category: byCategory,
+        by_payment_method: byPaymentMethod,
+      });
     } catch (err) {
-      console.error('Error loading expenses:', err);
-      setError('Ошибка загрузки расходов');
+      console.error("Error loading expenses:", err);
+      setError("Ошибка загрузки расходов");
+      setExpenses([]);
+      setStatistics(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadStatistics = async () => {
-    if (!user) return;
-    
-    try {
-      const data = await expensesAPI.getStatistics({ user_id: user.id });
-      setStatistics(data);
-    } catch (err) {
-      console.error('Error loading statistics:', err);
-    }
+  const handleFilterChange = (e) => {
+    setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
   const handleOpenDialog = (expense = null) => {
@@ -115,21 +135,21 @@ export const MyExpenses = () => {
         payment_method: expense.payment_method,
         amount: expense.amount.toString(),
         date: expense.date,
-        comment: expense.comment || '',
+        comment: expense.comment || "",
       });
     } else {
       setEditingExpense(null);
       setFormData({
-        category: 'food',
-        payment_method: 'card',
-        amount: '',
-        date: new Date().toISOString().split('T')[0],
-        comment: '',
+        category: "food",
+        payment_method: "card",
+        amount: "",
+        date: new Date().toISOString().split("T")[0],
+        comment: "",
       });
     }
     setDialogOpen(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
   };
 
   const handleCloseDialog = () => {
@@ -138,46 +158,36 @@ export const MyExpenses = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async () => {
-    setError('');
-    setSuccess('');
-
+    setError("");
+    setSuccess("");
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      setError('Введите корректную сумму');
+      setError("Введите корректную сумму");
       return;
     }
-
     try {
       const expenseData = {
         ...formData,
         amount: parseFloat(formData.amount),
         user_id: user.id,
       };
-
-      if (!expenseData.comment) {
-        delete expenseData.comment;
-      }
+      if (!expenseData.comment) delete expenseData.comment;
 
       if (editingExpense) {
         await expensesAPI.updateExpense(editingExpense.id, expenseData);
-        setSuccess('Расход обновлен');
+        setSuccess("Расход обновлен");
       } else {
         await expensesAPI.createExpense(expenseData);
-        setSuccess('Расход добавлен');
+        setSuccess("Расход добавлен");
       }
-
       handleCloseDialog();
       await loadExpenses();
-      await loadStatistics();
     } catch (err) {
-      console.error('Error saving expense:', err);
-      setError(err.response?.data?.detail || 'Ошибка сохранения расхода');
+      console.error("Error saving expense:", err);
+      setError(err.response?.data?.detail || "Ошибка сохранения расхода");
     }
   };
 
@@ -188,26 +198,27 @@ export const MyExpenses = () => {
 
   const handleDeleteConfirm = async () => {
     if (!expenseToDelete) return;
-
     try {
       await expensesAPI.deleteExpense(expenseToDelete.id);
-      setSuccess('Расход удален');
+      setSuccess("Расход удален");
       setDeleteDialogOpen(false);
       setExpenseToDelete(null);
       await loadExpenses();
-      await loadStatistics();
     } catch (err) {
-      console.error('Error deleting expense:', err);
-      setError('Ошибка удаления расхода');
+      console.error("Error deleting expense:", err);
+      setError("Ошибка удаления расхода");
     }
   };
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">
-          Мои расходы
-        </Typography>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+      >
+        <Typography variant="h4">Мои расходы</Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -218,18 +229,61 @@ export const MyExpenses = () => {
       </Box>
 
       {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess("")}>
           {success}
         </Alert>
       )}
-
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
           {error}
         </Alert>
       )}
 
-      {/* Статистика */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="end">
+          <Grid item xs={12} sm={4}>
+            <TextField
+              select
+              fullWidth
+              label="Категория"
+              name="category"
+              value={filters.category}
+              onChange={handleFilterChange}
+              sx={{ minWidth: 150 }}
+            >
+              <MenuItem value="">Все</MenuItem>
+              {CATEGORIES.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              type="date"
+              label="С даты"
+              name="dateFrom"
+              value={filters.dateFrom}
+              onChange={handleFilterChange}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              type="date"
+              label="По дату"
+              name="dateTo"
+              value={filters.dateTo}
+              onChange={handleFilterChange}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+        </Grid>
+      </Paper>
+
       {statistics && (
         <Grid container spacing={3} mb={3}>
           <Grid item xs={12} md={4}>
@@ -254,8 +308,15 @@ export const MyExpenses = () => {
                   По категориям
                 </Typography>
                 {Object.entries(statistics.by_category).map(([cat, amount]) => (
-                  <Box key={cat} display="flex" justifyContent="space-between" mt={1}>
-                    <Typography variant="body2">{getCategoryLabel(cat)}:</Typography>
+                  <Box
+                    key={cat}
+                    display="flex"
+                    justifyContent="space-between"
+                    mt={1}
+                  >
+                    <Typography variant="body2">
+                      {getCategoryLabel(cat)}:
+                    </Typography>
                     <Typography variant="body2" fontWeight="bold">
                       {amount.toFixed(2)} ₽
                     </Typography>
@@ -270,21 +331,29 @@ export const MyExpenses = () => {
                 <Typography color="text.secondary" gutterBottom>
                   По способам оплаты
                 </Typography>
-                {Object.entries(statistics.by_payment_method).map(([method, amount]) => (
-                  <Box key={method} display="flex" justifyContent="space-between" mt={1}>
-                    <Typography variant="body2">{getPaymentMethodLabel(method)}:</Typography>
-                    <Typography variant="body2" fontWeight="bold">
-                      {amount.toFixed(2)} ₽
-                    </Typography>
-                  </Box>
-                ))}
+                {Object.entries(statistics.by_payment_method).map(
+                  ([method, amount]) => (
+                    <Box
+                      key={method}
+                      display="flex"
+                      justifyContent="space-between"
+                      mt={1}
+                    >
+                      <Typography variant="body2">
+                        {getPaymentMethodLabel(method)}:
+                      </Typography>
+                      <Typography variant="body2" fontWeight="bold">
+                        {amount.toFixed(2)} ₽
+                      </Typography>
+                    </Box>
+                  ),
+                )}
               </CardContent>
             </Card>
           </Grid>
         </Grid>
       )}
 
-      {/* Таблица расходов */}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -314,18 +383,25 @@ export const MyExpenses = () => {
               expenses.map((expense) => (
                 <TableRow key={expense.id}>
                   <TableCell>
-                    {format(new Date(expense.date), 'dd MMMM yyyy', { locale: ru })}
+                    {format(new Date(expense.date), "dd MMMM yyyy", {
+                      locale: ru,
+                    })}
                   </TableCell>
                   <TableCell>
-                    <Chip label={getCategoryLabel(expense.category)} size="small" />
+                    <Chip
+                      label={getCategoryLabel(expense.category)}
+                      size="small"
+                    />
                   </TableCell>
                   <TableCell>
                     <Typography fontWeight="bold">
                       {expense.amount.toFixed(2)} ₽
                     </Typography>
                   </TableCell>
-                  <TableCell>{getPaymentMethodLabel(expense.payment_method)}</TableCell>
-                  <TableCell>{expense.comment || '—'}</TableCell>
+                  <TableCell>
+                    {getPaymentMethodLabel(expense.payment_method)}
+                  </TableCell>
+                  <TableCell>{expense.comment || "—"}</TableCell>
                   <TableCell align="right">
                     <IconButton
                       size="small"
@@ -349,10 +425,14 @@ export const MyExpenses = () => {
         </Table>
       </TableContainer>
 
-      {/* Диалог создания/редактирования */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>
-          {editingExpense ? 'Редактировать расход' : 'Добавить расход'}
+          {editingExpense ? "Редактировать расход" : "Добавить расход"}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
@@ -428,22 +508,23 @@ export const MyExpenses = () => {
         <DialogActions>
           <Button onClick={handleCloseDialog}>Отмена</Button>
           <Button onClick={handleSubmit} variant="contained">
-            {editingExpense ? 'Сохранить' : 'Добавить'}
+            {editingExpense ? "Сохранить" : "Добавить"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Диалог подтверждения удаления */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
         <DialogTitle>Удалить расход?</DialogTitle>
         <DialogContent>
-          <Typography>
-            Вы уверены, что хотите удалить этот расход?
-          </Typography>
+          <Typography>Вы уверены, что хотите удалить этот расход?</Typography>
           {expenseToDelete && (
             <Box mt={2}>
               <Typography variant="body2" color="text.secondary">
-                {getCategoryLabel(expenseToDelete.category)} — {expenseToDelete.amount} ₽
+                {getCategoryLabel(expenseToDelete.category)} —{" "}
+                {expenseToDelete.amount.toFixed(2)} ₽
               </Typography>
             </Box>
           )}
@@ -458,4 +539,3 @@ export const MyExpenses = () => {
     </Box>
   );
 };
-

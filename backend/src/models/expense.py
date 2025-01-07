@@ -44,4 +44,4 @@ class Expense(Base, TimestampMixin):
     user: Mapped["User"] = relationship(back_populates="expenses")
 
 
-Index("ix_expenses_user_date", Expense.user_id, Expense.expense_date)
+Index("ix_expenses_user_date", Expense.user_id, Expense.date)

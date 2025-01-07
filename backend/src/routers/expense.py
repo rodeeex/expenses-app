@@ -1,7 +1,3 @@
-"""
-Роутер для управления расходами
-"""
-
 from datetime import date
 from typing import Optional
 from uuid import UUID
@@ -32,31 +28,10 @@ router = APIRouter(
     "/",
     response_model=list[ExpenseRead],
     status_code=status.HTTP_200_OK,
-    summary="Получить список расходов",
-    description="Возвращает список расходов с возможностью фильтрации по различным параметрам.",
-    responses={
-        200: {
-            "description": "Список расходов",
-            "content": {
-                "application/json": {
-                    "example": [
-                        {
-                            "id": "123e4567-e89b-12d3-a456-426614174000",
-                            "user_id": "223e4567-e89b-12d3-a456-426614174001",
-                            "category": "food",
-                            "payment_method": "card",
-                            "amount": 1500.50,
-                            "date": "2024-12-22",
-                            "comment": "Обед в ресторане",
-                        }
-                    ]
-                }
-            },
-        }
-    },
+    summary="Получить список расходов текущего пользователя",
+    description="Возвращает расходы авторизованного пользователя с фильтрацией по категории, способу оплаты и диапазону дат.",
 )
 async def get_expenses(
-    user_id: Optional[UUID] = Query(None, description="Фильтр по ID пользователя"),
     category: Optional[ExpenseCategory] = Query(
         None, description="Фильтр по категории"
     ),
@@ -67,24 +42,18 @@ async def get_expenses(
         None, description="Начальная дата (включительно)"
     ),
     date_to: Optional[date] = Query(None, description="Конечная дата (включительно)"),
-    skip: int = Query(
-        0, ge=0, description="Количество записей для пропуска (пагинация)"
-    ),
-    limit: int = Query(
-        100, ge=1, le=1000, description="Максимальное количество записей"
-    ),
+    skip: int = Query(0, ge=0, description="Пропустить записи (пагинация)"),
+    limit: int = Query(100, ge=1, le=1000, description="Максимум записей"),
     current_user_id: UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> list[ExpenseRead]:
-    """
-    Получить список расходов с фильтрацией
-
-    Возвращает список расходов с возможностью фильтрации по различным параметрам.
-    Пользователь может видеть только свои расходы.
-    """
     expenses = await expense_service.list_expenses(
         db=db,
-        user_id=current_user_id,
+        current_user_id=current_user_id,
+        category=category,
+        payment_method=payment_method,
+        date_from=date_from,
+        date_to=date_to,
         skip=skip,
         limit=limit,
     )
@@ -252,7 +221,7 @@ async def update_expense(
                 "application/json": {
                     "example": {
                         "id": "123e4567-e89b-12d3-a456-426614174000",
-                        "detail": "Expense deleted",
+                        "detail": "Расход успешно удален",
                     }
                 }
             },
@@ -283,71 +252,4 @@ async def delete_expense(
         expense_id=expense_id,
         current_user_id=current_user_id,
     )
-    return ExpenseDeleteResponse(id=expense_id, detail="Expense deleted")
-
-
-@router.get(
-    "/statistics/summary",
-    response_model=ExpenseStatisticsResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Получить статистику по расходам",
-    description="Возвращает статистику по расходам текущего пользователя.",
-    responses={
-        200: {
-            "description": "Статистика по расходам",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "total_amount": 50000.00,
-                        "count": 150,
-                        "period_start": "2024-12-01",
-                        "period_end": "2024-12-31",
-                        "by_category": {
-                            "food": 20000.00,
-                            "transport": 15000.00,
-                        },
-                        "by_payment_method": {
-                            "card": 40000.00,
-                            "cash": 8000.00,
-                        },
-                    }
-                }
-            },
-        }
-    },
-)
-async def get_expense_statistics(
-    date_from: Optional[date] = Query(
-        None, description="Начальная дата периода (включительно)"
-    ),
-    date_to: Optional[date] = Query(
-        None, description="Конечная дата периода (включительно)"
-    ),
-    month: Optional[int] = Query(
-        None,
-        ge=1,
-        le=12,
-        description="Месяц для расчета статистики (1-12). Если указан, используется текущий год.",
-    ),
-    year: Optional[int] = Query(
-        None, ge=2000, le=2100, description="Год для расчета статистики."
-    ),
-    current_user_id: UUID = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
-) -> ExpenseStatisticsResponse:
-    """
-    Получить статистику по расходам
-
-    Возвращает агрегированную статистику по расходам текущего пользователя.
-    Если период не указан, возвращается статистика за текущий месяц.
-    """
-    # TODO: Реализовать получение статистики через expense_service
-    # Пока заглушка
-    return ExpenseStatisticsResponse(
-        total_amount=0.0,
-        count=0,
-        period_start=date_from,
-        period_end=date_to,
-        by_category={},
-        by_payment_method={},
-    )
+    return ExpenseDeleteResponse(id=expense_id, detail="Расход успешно удален")
