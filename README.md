@@ -8,5 +8,5 @@
 
 ## Разработчики
 - Anton Pushkarev - DevOps, бэкенд
-- Bogdan Nekrasov - фронтенд
-- Daniil Zhelanov - (to be continued...)
+- Bogdan Nekrasov - фронтенд, бэкенд
+- Daniil Zhelanov - БД, бэкенд
