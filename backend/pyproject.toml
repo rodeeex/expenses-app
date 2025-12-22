@@ -1,0 +1,13 @@
+[project]
+name = "expenses-backend"
+version = "0.1.0"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "sqlalchemy",
+  "aiosqlite",
+  "alembic",
+  "pydantic-settings",
+  "python-dotenv",
+]
