@@ -49,3 +49,8 @@ class ExpenseRead(ExpenseBase):
 
     id: UUID
     user_id: UUID
+
+
+class ExpenseDeleteResponse(BaseModel):
+    id: UUID
+    detail: str = "Expense deleted"

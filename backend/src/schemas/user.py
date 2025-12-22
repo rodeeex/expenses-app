@@ -56,3 +56,8 @@ class UserRead(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+
+
+class UserDeleteResponse(BaseModel):
+    id: UUID
+    detail: str = "User deleted"
