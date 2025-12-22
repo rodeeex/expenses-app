@@ -54,3 +54,30 @@ class ExpenseRead(ExpenseBase):
 class ExpenseDeleteResponse(BaseModel):
     id: UUID
     detail: str = "Expense deleted"
+
+
+class ExpenseFilterParams(BaseModel):
+    """Параметры фильтрации расходов"""
+    user_id: UUID | None = Field(None, description="Фильтр по ID пользователя")
+    category: ExpenseCategory | None = Field(None, description="Фильтр по категории")
+    payment_method: PaymentMethod | None = Field(None, description="Фильтр по способу оплаты")
+    date_from: date | None = Field(None, description="Начальная дата (включительно)")
+    date_to: date | None = Field(None, description="Конечная дата (включительно)")
+
+
+class ExpenseStatisticsResponse(BaseModel):
+    """Статистика по расходам"""
+    total_amount: float = Field(..., description="Общая сумма расходов")
+    count: int = Field(..., description="Количество расходов")
+    period_start: date | None = Field(None, description="Начало периода")
+    period_end: date | None = Field(None, description="Конец периода")
+    by_category: dict[str, float] = Field(default_factory=dict, description="Сумма по категориям")
+    by_payment_method: dict[str, float] = Field(default_factory=dict, description="Сумма по способам оплаты")
+
+
+class UserExpenseSummary(BaseModel):
+    """Сводка расходов пользователя за период"""
+    user_id: UUID
+    username: str
+    total_amount: float = Field(..., description="Общая сумма расходов за период")
+    expense_count: int = Field(..., description="Количество расходов за период")
