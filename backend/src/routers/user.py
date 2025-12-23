@@ -3,7 +3,7 @@
 """
 from uuid import UUID
 
-from fastapi import APIRouter, status, Query
+from fastapi import APIRouter, status
 
 from src.schemas.user import (
     UserCreate,
@@ -11,7 +11,6 @@ from src.schemas.user import (
     UserRead,
     UserDeleteResponse,
 )
-from src.schemas.expense import UserExpenseSummary
 
 router = APIRouter(
     prefix="/users",
@@ -21,64 +20,77 @@ router = APIRouter(
 
 
 @router.get(
-    "/",
-    response_model=list[UserExpenseSummary],
+    "/me",
+    response_model=UserRead,
     status_code=status.HTTP_200_OK,
-    summary="Получить список всех пользователей с суммами расходов",
-    description="Возвращает список всех пользователей с суммами их расходов за последний месяц. "
-                "Используется для главной страницы приложения.",
+    summary="Получить текущего авторизованного пользователя",
+    description="Возвращает информацию о текущем авторизованном пользователе. "
+                "Используется для страницы профиля.",
     responses={
         200: {
-            "description": "Список пользователей с суммами расходов",
+            "description": "Информация о текущем пользователе",
             "content": {
                 "application/json": {
-                    "example": [
-                        {
-                            "user_id": "123e4567-e89b-12d3-a456-426614174000",
-                            "username": "john_doe",
-                            "total_amount": 15000.50,
-                            "expense_count": 25
-                        },
-                        {
-                            "user_id": "223e4567-e89b-12d3-a456-426614174001",
-                            "username": "jane_smith",
-                            "total_amount": 8500.00,
-                            "expense_count": 15
-                        }
-                    ]
+                    "example": {
+                        "id": "123e4567-e89b-12d3-a456-426614174000",
+                        "username": "john_doe"
+                    }
                 }
             }
-        }
+        },
+        401: {"description": "Не авторизован"},
     },
 )
-async def get_all_users_with_expenses(
-    month: int | None = Query(
-        None,
-        ge=1,
-        le=12,
-        description="Месяц для расчета расходов (1-12). Если не указан, используется текущий месяц."
-    ),
-    year: int | None = Query(
-        None,
-        ge=2000,
-        le=2100,
-        description="Год для расчета расходов. Если не указан, используется текущий год."
-    ),
-) -> list[UserExpenseSummary]:
+async def get_current_user() -> UserRead:
     """
-    Получить список всех пользователей с суммами расходов
+    Получить текущего авторизованного пользователя
     
-    Возвращает список всех пользователей в системе с информацией о:
-    - Общей сумме расходов за указанный период (по умолчанию - последний месяц)
-    - Количестве расходов за период
+    Возвращает информацию о пользователе, который выполнил авторизацию.
+    Требует валидный access токен в заголовке Authorization.
     
-    Используется для отображения на главной странице приложения.
-    
-    **Параметры запроса:**
-    - **month**: Месяц (1-12), по умолчанию - текущий месяц
-    - **year**: Год, по умолчанию - текущий год
+    Используется для отображения информации на странице профиля.
     """
-    # TODO: Реализовать получение списка пользователей с суммами расходов
+    # TODO: Реализовать получение текущего пользователя
+    pass
+
+
+@router.put(
+    "/me",
+    response_model=UserRead,
+    status_code=status.HTTP_200_OK,
+    summary="Обновить текущего авторизованного пользователя",
+    description="Обновляет информацию о текущем авторизованном пользователе. "
+                "Можно обновить username и/или password. Используется для страницы профиля.",
+    responses={
+        200: {
+            "description": "Пользователь успешно обновлен",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "123e4567-e89b-12d3-a456-426614174000",
+                        "username": "john_doe_updated"
+                    }
+                }
+            }
+        },
+        401: {"description": "Не авторизован"},
+        400: {"description": "Пользователь с таким username уже существует"},
+        422: {"description": "Ошибка валидации данных"},
+    },
+)
+async def update_current_user(user_data: UserUpdate) -> UserRead:
+    """
+    Обновить текущего авторизованного пользователя
+    
+    - **username**: Новое имя пользователя (опционально)
+    - **password**: Новый пароль (опционально)
+    
+    Можно обновить только указанные поля. Если поле не указано, оно остается без изменений.
+    Требует валидный access токен в заголовке Authorization.
+    
+    Используется для изменения данных на странице профиля.
+    """
+    # TODO: Реализовать обновление текущего пользователя
     pass
 
 

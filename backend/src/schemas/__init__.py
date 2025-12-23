@@ -6,7 +6,6 @@ from .expense import (
     ExpenseDeleteResponse,
     ExpenseFilterParams,
     ExpenseStatisticsResponse,
-    UserExpenseSummary,
 )
 from .auth import (
     LoginRequest,
@@ -26,7 +25,6 @@ __all__ = [
     "ExpenseDeleteResponse",
     "ExpenseFilterParams",
     "ExpenseStatisticsResponse",
-    "UserExpenseSummary",
     "LoginRequest",
     "TokenResponse",
     "RefreshTokenRequest",
