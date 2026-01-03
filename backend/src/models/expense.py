@@ -6,7 +6,7 @@ from datetime import date
 from sqlalchemy import Date, Enum, ForeignKey, Index, Numeric, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import Base, GUID, TimestampMixin
+from .base import GUID, Base, TimestampMixin
 from .enums import ExpenseCategory, PaymentMethod
 
 
@@ -24,7 +24,7 @@ class Expense(Base, TimestampMixin):
     # В БД колонка называется sum (как в ТЗ/схеме)
     amount: Mapped[float] = mapped_column("sum", Numeric(12, 2), nullable=False)
 
-    expense_date: Mapped[date] = mapped_column("date", Date, nullable=False, index=True)
+    date: Mapped[date] = mapped_column("date", Date, nullable=False, index=True)
 
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
 
