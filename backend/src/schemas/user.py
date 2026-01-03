@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class UserBase(BaseModel):
@@ -29,12 +30,12 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
-    username: str | None = Field(None, min_length=3, max_length=32)
-    password: str | None = Field(None, min_length=6, max_length=128)
+    username: Optional[str] = Field(None, min_length=3, max_length=32)
+    password: Optional[str] = Field(None, min_length=6, max_length=128)
 
     @field_validator("username")
     @classmethod
-    def validate_username(cls, v: str | None) -> str | None:
+    def validate_username(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
         v = v.strip()
@@ -44,7 +45,7 @@ class UserUpdate(BaseModel):
 
     @field_validator("password")
     @classmethod
-    def validate_password(cls, v: str | None) -> str | None:
+    def validate_password(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
         if v.strip() != v:
@@ -54,7 +55,6 @@ class UserUpdate(BaseModel):
 
 class UserRead(UserBase):
     model_config = ConfigDict(from_attributes=True)
-
     id: UUID
 
 

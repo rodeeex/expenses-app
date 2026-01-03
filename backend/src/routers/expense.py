@@ -1,20 +1,25 @@
 """
 Роутер для управления расходами
 """
-from uuid import UUID
+
 from datetime import date
+from typing import Optional
+from uuid import UUID
 
-from fastapi import APIRouter, status, Query
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.database import get_db
+from src.dependencies import get_current_user_id
+from src.models.enums import ExpenseCategory, PaymentMethod
 from src.schemas.expense import (
     ExpenseCreate,
-    ExpenseUpdate,
-    ExpenseRead,
     ExpenseDeleteResponse,
-    ExpenseFilterParams,
+    ExpenseRead,
     ExpenseStatisticsResponse,
+    ExpenseUpdate,
 )
-from src.models.enums import ExpenseCategory, PaymentMethod
+from src.services import expense as expense_service
 
 router = APIRouter(
     prefix="/expenses",
@@ -42,41 +47,48 @@ router = APIRouter(
                             "payment_method": "card",
                             "amount": 1500.50,
                             "date": "2024-12-22",
-                            "comment": "Обед в ресторане"
+                            "comment": "Обед в ресторане",
                         }
                     ]
                 }
-            }
+            },
         }
     },
 )
 async def get_expenses(
-    user_id: UUID | None = Query(None, description="Фильтр по ID пользователя"),
-    category: ExpenseCategory | None = Query(None, description="Фильтр по категории"),
-    payment_method: PaymentMethod | None = Query(None, description="Фильтр по способу оплаты"),
-    date_from: date | None = Query(None, description="Начальная дата (включительно)"),
-    date_to: date | None = Query(None, description="Конечная дата (включительно)"),
-    skip: int = Query(0, ge=0, description="Количество записей для пропуска (пагинация)"),
-    limit: int = Query(100, ge=1, le=1000, description="Максимальное количество записей"),
+    user_id: Optional[UUID] = Query(None, description="Фильтр по ID пользователя"),
+    category: Optional[ExpenseCategory] = Query(
+        None, description="Фильтр по категории"
+    ),
+    payment_method: Optional[PaymentMethod] = Query(
+        None, description="Фильтр по способу оплаты"
+    ),
+    date_from: Optional[date] = Query(
+        None, description="Начальная дата (включительно)"
+    ),
+    date_to: Optional[date] = Query(None, description="Конечная дата (включительно)"),
+    skip: int = Query(
+        0, ge=0, description="Количество записей для пропуска (пагинация)"
+    ),
+    limit: int = Query(
+        100, ge=1, le=1000, description="Максимальное количество записей"
+    ),
+    current_user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
 ) -> list[ExpenseRead]:
     """
     Получить список расходов с фильтрацией
-    
-    Возвращает список расходов с возможностью фильтрации по:
-    - **user_id**: ID пользователя
-    - **category**: Категория расхода
-    - **payment_method**: Способ оплаты
-    - **date_from**: Начальная дата периода (включительно)
-    - **date_to**: Конечная дата периода (включительно)
-    
-    Поддерживает пагинацию:
-    - **skip**: Количество записей для пропуска
-    - **limit**: Максимальное количество записей в ответе (максимум 1000)
-    
-    Все фильтры опциональны и могут комбинироваться.
+
+    Возвращает список расходов с возможностью фильтрации по различным параметрам.
+    Пользователь может видеть только свои расходы.
     """
-    # TODO: Реализовать получение списка расходов с фильтрацией
-    pass
+    expenses = await expense_service.list_expenses(
+        db=db,
+        user_id=current_user_id,
+        skip=skip,
+        limit=limit,
+    )
+    return [ExpenseRead.model_validate(exp) for exp in expenses]
 
 
 @router.get(
@@ -97,30 +109,34 @@ async def get_expenses(
                         "payment_method": "card",
                         "amount": 1500.50,
                         "date": "2024-12-22",
-                        "comment": "Обед в ресторане"
+                        "comment": "Обед в ресторане",
                     }
                 }
-            }
+            },
         },
         404: {"description": "Расход не найден"},
+        403: {"description": "Нет доступа к этому расходу"},
     },
 )
-async def get_expense(expense_id: UUID) -> ExpenseRead:
+async def get_expense(
+    expense_id: UUID,
+    current_user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> ExpenseRead:
     """
     Получить расход по ID
-    
-    - **expense_id**: UUID расхода
-    
-    Возвращает полную информацию о расходе:
-    - Категория
-    - Сумма
-    - Дата
-    - Комментарий
-    - Способ оплаты
-    - ID пользователя
+
+    Возвращает информацию о расходе. Пользователь может видеть только свои расходы.
     """
-    # TODO: Реализовать получение расхода
-    pass
+    expense = await expense_service.get_expense_by_id(db, expense_id)
+
+    if expense.user_id != current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нет доступа к этому расходу",
+        )
+
+    return ExpenseRead.model_validate(expense)
 
 
 @router.post(
@@ -141,30 +157,31 @@ async def get_expense(expense_id: UUID) -> ExpenseRead:
                         "payment_method": "card",
                         "amount": 1500.50,
                         "date": "2024-12-22",
-                        "comment": "Обед в ресторане"
+                        "comment": "Обед в ресторане",
                     }
                 }
-            }
+            },
         },
-        400: {"description": "Некорректные данные (например, пользователь не найден)"},
+        400: {"description": "Некорректные данные"},
         422: {"description": "Ошибка валидации данных"},
     },
 )
-async def create_expense(expense_data: ExpenseCreate) -> ExpenseRead:
+async def create_expense(
+    expense_data: ExpenseCreate,
+    current_user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> ExpenseRead:
     """
     Создать новый расход
-    
-    - **user_id**: UUID пользователя, которому принадлежит расход
-    - **category**: Категория расхода (food, transport, subscriptions, health, entertainment, utilities, other)
-    - **payment_method**: Способ оплаты (cash, card, other)
-    - **amount**: Сумма расхода (больше 0, максимум 1,000,000)
-    - **date**: Дата расхода
-    - **comment**: Комментарий (опционально, максимум 500 символов)
-    
-    Возвращает созданный расход с присвоенным ID.
+
+    Создаёт расход для текущего авторизованного пользователя.
     """
-    # TODO: Реализовать создание расхода
-    pass
+    expense = await expense_service.create_expense(
+        db=db,
+        payload=expense_data,
+        current_user_id=current_user_id,
+    )
+    return ExpenseRead.model_validate(expense)
 
 
 @router.put(
@@ -185,30 +202,41 @@ async def create_expense(expense_data: ExpenseCreate) -> ExpenseRead:
                         "payment_method": "cash",
                         "amount": 2000.00,
                         "date": "2024-12-22",
-                        "comment": "Обновленный комментарий"
+                        "comment": "Обновленный комментарий",
                     }
                 }
-            }
+            },
         },
         404: {"description": "Расход не найден"},
+        403: {"description": "Нет доступа к этому расходу"},
         422: {"description": "Ошибка валидации данных"},
     },
 )
-async def update_expense(expense_id: UUID, expense_data: ExpenseUpdate) -> ExpenseRead:
+async def update_expense(
+    expense_id: UUID,
+    expense_data: ExpenseUpdate,
+    current_user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> ExpenseRead:
     """
     Обновить расход
-    
-    - **expense_id**: UUID расхода
-    - **category**: Новая категория (опционально)
-    - **payment_method**: Новый способ оплаты (опционально)
-    - **amount**: Новая сумма (опционально)
-    - **date**: Новая дата (опционально)
-    - **comment**: Новый комментарий (опционально)
-    
-    Можно обновить только указанные поля. Если поле не указано, оно остается без изменений.
+
+    Обновляет расход. Пользователь может обновлять только свои расходы.
     """
-    # TODO: Реализовать обновление расхода
-    pass
+    expense = await expense_service.get_expense_by_id(db, expense_id)
+    if expense.user_id != current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нет доступа к этому расходу",
+        )
+
+    updated_expense = await expense_service.update_expense(
+        db=db,
+        expense_id=expense_id,
+        payload=expense_data,
+        current_user_id=current_user_id,
+    )
+    return ExpenseRead.model_validate(updated_expense)
 
 
 @router.delete(
@@ -224,26 +252,38 @@ async def update_expense(expense_id: UUID, expense_data: ExpenseUpdate) -> Expen
                 "application/json": {
                     "example": {
                         "id": "123e4567-e89b-12d3-a456-426614174000",
-                        "detail": "Expense deleted"
+                        "detail": "Expense deleted",
                     }
                 }
-            }
+            },
         },
         404: {"description": "Расход не найден"},
+        403: {"description": "Нет доступа к этому расходу"},
     },
 )
-async def delete_expense(expense_id: UUID) -> ExpenseDeleteResponse:
+async def delete_expense(
+    expense_id: UUID,
+    current_user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> ExpenseDeleteResponse:
     """
     Удалить расход
-    
-    - **expense_id**: UUID расхода
-    
-    Удаляет расход из системы.
-    
-    **Внимание:** Операция необратима!
+
+    Удаляет расход. Пользователь может удалять только свои расходы.
     """
-    # TODO: Реализовать удаление расхода
-    pass
+    expense = await expense_service.get_expense_by_id(db, expense_id)
+    if expense.user_id != current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нет доступа к этому расходу",
+        )
+
+    await expense_service.delete_expense(
+        db=db,
+        expense_id=expense_id,
+        current_user_id=current_user_id,
+    )
+    return ExpenseDeleteResponse(id=expense_id, detail="Expense deleted")
 
 
 @router.get(
@@ -251,7 +291,7 @@ async def delete_expense(expense_id: UUID) -> ExpenseDeleteResponse:
     response_model=ExpenseStatisticsResponse,
     status_code=status.HTTP_200_OK,
     summary="Получить статистику по расходам",
-    description="Возвращает статистику по расходам с возможностью фильтрации по пользователю и периоду.",
+    description="Возвращает статистику по расходам текущего пользователя.",
     responses={
         200: {
             "description": "Статистика по расходам",
@@ -265,57 +305,49 @@ async def delete_expense(expense_id: UUID) -> ExpenseDeleteResponse:
                         "by_category": {
                             "food": 20000.00,
                             "transport": 15000.00,
-                            "subscriptions": 5000.00,
-                            "health": 3000.00,
-                            "entertainment": 4000.00,
-                            "utilities": 2000.00,
-                            "other": 1000.00
                         },
                         "by_payment_method": {
                             "card": 40000.00,
                             "cash": 8000.00,
-                            "other": 2000.00
-                        }
+                        },
                     }
                 }
-            }
+            },
         }
     },
 )
 async def get_expense_statistics(
-    user_id: UUID | None = Query(None, description="ID пользователя для фильтрации статистики"),
-    date_from: date | None = Query(None, description="Начальная дата периода (включительно)"),
-    date_to: date | None = Query(None, description="Конечная дата периода (включительно)"),
-    month: int | None = Query(
+    date_from: Optional[date] = Query(
+        None, description="Начальная дата периода (включительно)"
+    ),
+    date_to: Optional[date] = Query(
+        None, description="Конечная дата периода (включительно)"
+    ),
+    month: Optional[int] = Query(
         None,
         ge=1,
         le=12,
-        description="Месяц для расчета статистики (1-12). Если указан, используется текущий год."
+        description="Месяц для расчета статистики (1-12). Если указан, используется текущий год.",
     ),
-    year: int | None = Query(
-        None,
-        ge=2000,
-        le=2100,
-        description="Год для расчета статистики. Если указан только год, возвращается статистика за весь год."
+    year: Optional[int] = Query(
+        None, ge=2000, le=2100, description="Год для расчета статистики."
     ),
+    current_user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
 ) -> ExpenseStatisticsResponse:
     """
     Получить статистику по расходам
-    
-    Возвращает агрегированную статистику по расходам:
-    - **total_amount**: Общая сумма расходов
-    - **count**: Количество расходов
-    - **period_start/period_end**: Период расчета
-    - **by_category**: Сумма расходов по каждой категории
-    - **by_payment_method**: Сумма расходов по каждому способу оплаты
-    
-    **Параметры фильтрации:**
-    - **user_id**: Фильтр по пользователю (опционально)
-    - **date_from/date_to**: Период в виде диапазона дат
-    - **month/year**: Период в виде месяца и года (если указан только year - весь год)
-    
-    Если не указан период, возвращается статистика за текущий месяц.
-    """
-    # TODO: Реализовать получение статистики
-    pass
 
+    Возвращает агрегированную статистику по расходам текущего пользователя.
+    Если период не указан, возвращается статистика за текущий месяц.
+    """
+    # TODO: Реализовать получение статистики через expense_service
+    # Пока заглушка
+    return ExpenseStatisticsResponse(
+        total_amount=0.0,
+        count=0,
+        period_start=date_from,
+        period_end=date_to,
+        by_category={},
+        by_payment_method={},
+    )

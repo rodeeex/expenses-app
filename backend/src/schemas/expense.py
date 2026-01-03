@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.models.enums import ExpenseCategory, PaymentMethod
 
@@ -13,11 +14,11 @@ class ExpenseBase(BaseModel):
     payment_method: PaymentMethod
     amount: float = Field(..., gt=0, le=1_000_000)
     date: date
-    comment: str | None = Field(None, max_length=500)
+    comment: Optional[str] = Field(None, max_length=500)
 
     @field_validator("comment")
     @classmethod
-    def normalize_comment(cls, v: str | None) -> str | None:
+    def normalize_comment(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return None
         v = v.strip()
@@ -29,15 +30,15 @@ class ExpenseCreate(ExpenseBase):
 
 
 class ExpenseUpdate(BaseModel):
-    category: ExpenseCategory | None = None
-    payment_method: PaymentMethod | None = None
-    amount: float | None = Field(None, gt=0, le=1_000_000)
-    date: date | None = None
-    comment: str | None = Field(None, max_length=500)
+    category: Optional[ExpenseCategory] = None
+    payment_method: Optional[PaymentMethod] = None
+    amount: Optional[float] = Field(None, gt=0, le=1_000_000)
+    date: Optional[date] = None
+    comment: Optional[str] = Field(None, max_length=500)
 
     @field_validator("comment")
     @classmethod
-    def normalize_comment(cls, v: str | None) -> str | None:
+    def normalize_comment(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return None
         v = v.strip()
@@ -46,7 +47,6 @@ class ExpenseUpdate(BaseModel):
 
 class ExpenseRead(ExpenseBase):
     model_config = ConfigDict(from_attributes=True)
-
     id: UUID
     user_id: UUID
 
@@ -58,25 +58,34 @@ class ExpenseDeleteResponse(BaseModel):
 
 class ExpenseFilterParams(BaseModel):
     """Параметры фильтрации расходов"""
-    user_id: UUID | None = Field(None, description="Фильтр по ID пользователя")
-    category: ExpenseCategory | None = Field(None, description="Фильтр по категории")
-    payment_method: PaymentMethod | None = Field(None, description="Фильтр по способу оплаты")
-    date_from: date | None = Field(None, description="Начальная дата (включительно)")
-    date_to: date | None = Field(None, description="Конечная дата (включительно)")
+
+    user_id: Optional[UUID] = Field(None, description="Фильтр по ID пользователя")
+    category: Optional[ExpenseCategory] = Field(None, description="Фильтр по категории")
+    payment_method: Optional[PaymentMethod] = Field(
+        None, description="Фильтр по способу оплаты"
+    )
+    date_from: Optional[date] = Field(None, description="Начальная дата (включительно)")
+    date_to: Optional[date] = Field(None, description="Конечная дата (включительно)")
 
 
 class ExpenseStatisticsResponse(BaseModel):
     """Статистика по расходам"""
+
     total_amount: float = Field(..., description="Общая сумма расходов")
     count: int = Field(..., description="Количество расходов")
-    period_start: date | None = Field(None, description="Начало периода")
-    period_end: date | None = Field(None, description="Конец периода")
-    by_category: dict[str, float] = Field(default_factory=dict, description="Сумма по категориям")
-    by_payment_method: dict[str, float] = Field(default_factory=dict, description="Сумма по способам оплаты")
+    period_start: Optional[date] = Field(None, description="Начало периода")
+    period_end: Optional[date] = Field(None, description="Конец периода")
+    by_category: dict[str, float] = Field(
+        default_factory=dict, description="Сумма по категориям"
+    )
+    by_payment_method: dict[str, float] = Field(
+        default_factory=dict, description="Сумма по способам оплаты"
+    )
 
 
 class UserExpenseSummary(BaseModel):
     """Сводка расходов пользователя за период"""
+
     user_id: UUID
     username: str
     total_amount: float = Field(..., description="Общая сумма расходов за период")
