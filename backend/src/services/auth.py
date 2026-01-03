@@ -4,9 +4,10 @@ import hashlib
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,22 +17,27 @@ from src.models.refresh_token import RefreshToken
 from src.models.user import User
 from src.schemas.user import UserCreate
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Argon2 хешер
+ph = PasswordHasher()
 
 
 # Пароли
 def hash_password(password: str) -> str:
     """
-    Хеширование пароля
+    Хеширование пароля через Argon2
     """
-    return pwd_context.hash(password)
+    return ph.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
-    Проверка пароля
+    Проверка пароля через Argon2
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        ph.verify(hashed_password, plain_password)
+        return True
+    except VerifyMismatchError:
+        return False
 
 
 # Access-токены
@@ -61,9 +67,6 @@ async def create_refresh_token(
     user_agent: str | None = None,
     ip: str | None = None,
 ) -> str:
-    """
-    Создание refresh-токена и сохранение его в БД
-    """
     expire = datetime.now(timezone.utc) + timedelta(
         days=settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
@@ -75,20 +78,16 @@ async def create_refresh_token(
     db_token = RefreshToken(
         user_id=user_id,
         token_hash=token_hash,
-        expires_at=expire,
+        expires_at=expire.replace(tzinfo=None),
         user_agent=user_agent,
         ip=ip,
     )
     db.add(db_token)
     await db.commit()
-
     return token
 
 
 async def verify_refresh_token(db: AsyncSession, token: str) -> UUID:
-    """
-    Проверка refresh токена в БД и извлечение user_id
-    """
     payload = jwt.decode(token, settings.KEY_DEFAULT, algorithms=["HS256"])
     token_hash = hashlib.sha256(token.encode()).hexdigest()
 
@@ -99,7 +98,9 @@ async def verify_refresh_token(db: AsyncSession, token: str) -> UUID:
     result = await db.execute(stmt)
     db_token = result.scalar_one_or_none()
 
-    if not db_token or db_token.expires_at < datetime.now(timezone.utc):
+    if not db_token or db_token.expires_at < datetime.now(timezone.utc).replace(
+        tzinfo=None
+    ):
         raise JWTError("Неверный или просроченный refresh-токен")
 
     return UUID(payload["user_id"])

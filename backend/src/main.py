@@ -1,6 +1,7 @@
+import uvicorn
 from fastapi import FastAPI
 
-from src.routers import auth, user, expense
+from src.routers import auth, expense, user
 
 app = FastAPI(
     title="Expenses API",

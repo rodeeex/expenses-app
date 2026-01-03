@@ -1,16 +1,14 @@
-"""
-Роутер для управления пользователями
-"""
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.schemas.user import (
-    UserCreate,
-    UserUpdate,
-    UserRead,
-    UserDeleteResponse,
-)
+from src.database import get_db
+from src.dependencies import get_current_user_id
+from src.schemas.expense import UserExpenseSummary
+from src.schemas.user import UserCreate, UserDeleteResponse, UserRead, UserUpdate
+from src.services import auth as auth_service
+from src.services import user as user_service
 
 router = APIRouter(
     prefix="/users",
@@ -20,12 +18,47 @@ router = APIRouter(
 
 
 @router.get(
+    "/",
+    response_model=list[UserExpenseSummary],
+    status_code=status.HTTP_200_OK,
+    summary="Получить всех пользователей с расходами за последний месяц",
+    description="Возвращает список всех пользователей и сумму их расходов за последние 30 дней. "
+    "Используется для главной страницы.",
+    responses={
+        200: {
+            "description": "Список пользователей с расходами",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "user_id": "123e4567-e89b-12d3-a456-426614174000",
+                            "username": "john_doe",
+                            "total_amount": 50000.00,
+                            "expense_count": 150,
+                        }
+                    ]
+                }
+            },
+        }
+    },
+)
+async def list_users(db: AsyncSession = Depends(get_db)) -> list[UserExpenseSummary]:
+    """
+    Получить всех пользователей с расходами за последний месяц
+
+    Публичный эндпоинт для главной страницы.
+    Возвращает список всех зарегистрированных пользователей и сумму их расходов за последние 30 дней.
+    """
+    return await user_service.get_all_users_with_last_month_expenses(db)
+
+
+@router.get(
     "/me",
     response_model=UserRead,
     status_code=status.HTTP_200_OK,
     summary="Получить текущего авторизованного пользователя",
     description="Возвращает информацию о текущем авторизованном пользователе. "
-                "Используется для страницы профиля.",
+    "Используется для страницы профиля.",
     responses={
         200: {
             "description": "Информация о текущем пользователе",
@@ -33,25 +66,26 @@ router = APIRouter(
                 "application/json": {
                     "example": {
                         "id": "123e4567-e89b-12d3-a456-426614174000",
-                        "username": "john_doe"
+                        "username": "john_doe",
                     }
                 }
-            }
+            },
         },
         401: {"description": "Не авторизован"},
     },
 )
-async def get_current_user() -> UserRead:
+async def get_current_user_endpoint(
+    current_user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> UserRead:
     """
     Получить текущего авторизованного пользователя
-    
+
     Возвращает информацию о пользователе, который выполнил авторизацию.
-    Требует валидный access токен в заголовке Authorization.
-    
     Используется для отображения информации на странице профиля.
     """
-    # TODO: Реализовать получение текущего пользователя
-    pass
+    user = await user_service.get_current_user(db, current_user_id)
+    return UserRead.model_validate(user)
 
 
 @router.put(
@@ -60,7 +94,7 @@ async def get_current_user() -> UserRead:
     status_code=status.HTTP_200_OK,
     summary="Обновить текущего авторизованного пользователя",
     description="Обновляет информацию о текущем авторизованном пользователе. "
-                "Можно обновить username и/или password. Используется для страницы профиля.",
+    "Можно обновить username и/или password. Используется для страницы профиля.",
     responses={
         200: {
             "description": "Пользователь успешно обновлен",
@@ -68,137 +102,34 @@ async def get_current_user() -> UserRead:
                 "application/json": {
                     "example": {
                         "id": "123e4567-e89b-12d3-a456-426614174000",
-                        "username": "john_doe_updated"
+                        "username": "john_doe_updated",
                     }
                 }
-            }
+            },
         },
         401: {"description": "Не авторизован"},
         400: {"description": "Пользователь с таким username уже существует"},
         422: {"description": "Ошибка валидации данных"},
     },
 )
-async def update_current_user(user_data: UserUpdate) -> UserRead:
+async def update_current_user_endpoint(
+    user_data: UserUpdate,
+    current_user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> UserRead:
     """
     Обновить текущего авторизованного пользователя
-    
+
     - **username**: Новое имя пользователя (опционально)
     - **password**: Новый пароль (опционально)
-    
+
     Можно обновить только указанные поля. Если поле не указано, оно остается без изменений.
-    Требует валидный access токен в заголовке Authorization.
-    
     Используется для изменения данных на странице профиля.
     """
-    # TODO: Реализовать обновление текущего пользователя
-    pass
-
-
-@router.get(
-    "/{user_id}",
-    response_model=UserRead,
-    status_code=status.HTTP_200_OK,
-    summary="Получить пользователя по ID",
-    description="Возвращает информацию о пользователе по его идентификатору.",
-    responses={
-        200: {
-            "description": "Информация о пользователе",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "123e4567-e89b-12d3-a456-426614174000",
-                        "username": "john_doe"
-                    }
-                }
-            }
-        },
-        404: {"description": "Пользователь не найден"},
-    },
-)
-async def get_user(user_id: UUID) -> UserRead:
-    """
-    Получить пользователя по ID
-    
-    - **user_id**: UUID пользователя
-    
-    Возвращает базовую информацию о пользователе (без пароля).
-    """
-    # TODO: Реализовать получение пользователя
-    pass
-
-
-@router.post(
-    "/",
-    response_model=UserRead,
-    status_code=status.HTTP_201_CREATED,
-    summary="Создать нового пользователя",
-    description="Создает нового пользователя в системе. "
-                "Для регистрации рекомендуется использовать /auth/register.",
-    responses={
-        201: {
-            "description": "Пользователь успешно создан",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "123e4567-e89b-12d3-a456-426614174000",
-                        "username": "john_doe"
-                    }
-                }
-            }
-        },
-        400: {"description": "Пользователь с таким username уже существует"},
-        422: {"description": "Ошибка валидации данных"},
-    },
-)
-async def create_user(user_data: UserCreate) -> UserRead:
-    """
-    Создать нового пользователя
-    
-    - **username**: Имя пользователя (3-32 символа, без пробелов)
-    - **password**: Пароль (минимум 6 символов)
-    
-    Для регистрации пользователей рекомендуется использовать эндпоинт `/auth/register`,
-    который также выполняет необходимые проверки и создание токенов.
-    """
-    # TODO: Реализовать создание пользователя
-    pass
-
-
-@router.put(
-    "/{user_id}",
-    response_model=UserRead,
-    status_code=status.HTTP_200_OK,
-    summary="Обновить пользователя",
-    description="Обновляет информацию о пользователе. Можно обновить username и/или password.",
-    responses={
-        200: {
-            "description": "Пользователь успешно обновлен",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "123e4567-e89b-12d3-a456-426614174000",
-                        "username": "john_doe_updated"
-                    }
-                }
-            }
-        },
-        404: {"description": "Пользователь не найден"},
-        400: {"description": "Пользователь с таким username уже существует"},
-        422: {"description": "Ошибка валидации данных"},
-    },
-)
-async def update_user(user_id: UUID, user_data: UserUpdate) -> UserRead:
-    """
-    Обновить пользователя
-    
-    - **user_id**: UUID пользователя
-    - **username**: Новое имя пользователя (опционально)
-    - **password**: Новый пароль (опционально)
-    
-    Можно обновить только указанные поля. Если поле не указано, оно остается без изменений.
-    """
-    # TODO: Реализовать обновление пользователя
-    pass
+    user = await user_service.update_user(
+        db, current_user_id, current_user_id, user_data
+    )
+    return UserRead.model_validate(user)
 
 
 @router.delete(
@@ -206,7 +137,7 @@ async def update_user(user_id: UUID, user_data: UserUpdate) -> UserRead:
     response_model=UserDeleteResponse,
     status_code=status.HTTP_200_OK,
     summary="Удалить пользователя",
-    description="Удаляет пользователя из системы. Все связанные расходы также будут удалены (CASCADE).",
+    description="Удаляет пользователя из системы. Все связанные расходы также будут удалены.",
     responses={
         200: {
             "description": "Пользователь успешно удален",
@@ -214,25 +145,28 @@ async def update_user(user_id: UUID, user_data: UserUpdate) -> UserRead:
                 "application/json": {
                     "example": {
                         "id": "123e4567-e89b-12d3-a456-426614174000",
-                        "detail": "User deleted"
+                        "detail": "Пользователь удалён",
                     }
                 }
-            }
+            },
         },
         404: {"description": "Пользователь не найден"},
     },
 )
-async def delete_user(user_id: UUID) -> UserDeleteResponse:
+async def delete_user_endpoint(
+    user_id: UUID,
+    current_user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> UserDeleteResponse:
     """
     Удалить пользователя
-    
-    - **user_id**: UUID пользователя
-    
-    Удаляет пользователя и все связанные с ним данные:
-    - Все расходы пользователя (CASCADE удаление)
-    - Все refresh токены пользователя
-    
-    """
-    # TODO: Реализовать удаление пользователя
-    pass
 
+    - **user_id**: UUID пользователя
+
+    Удаляет пользователя и все связанные с ним данные:
+    - все расходы пользователя
+    - все refresh-токены пользователя
+    """
+    await auth_service.revoke_all_user_tokens(db, current_user_id)
+    await user_service.delete_user(db, user_id, current_user_id)
+    return UserDeleteResponse(id=user_id, detail="Пользователь удалён")
