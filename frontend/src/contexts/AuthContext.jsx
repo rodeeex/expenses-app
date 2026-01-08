@@ -9,7 +9,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Проверка аутентификации при загрузке
   useEffect(() => {
     checkAuth();
   }, []);
@@ -43,7 +42,6 @@ export const AuthProvider = ({ children }) => {
   const register = async (username, password) => {
     try {
       await authAPI.register(username, password);
-      // После регистрации автоматически логинимся
       return await login(username, password);
     } catch (error) {
       return {

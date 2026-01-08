@@ -5,11 +5,6 @@ import { Box, CircularProgress } from '@mui/material';
 export const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
-  // ВРЕМЕННО: Отключаем проверку авторизации для просмотра UI
-  // TODO: Включить обратно когда backend будет готов
-  return children;
-
-  /* Раскомментировать когда backend заработает:
   if (loading) {
     return (
       <Box
@@ -28,5 +23,4 @@ export const ProtectedRoute = ({ children }) => {
   }
 
   return children;
-  */
 };

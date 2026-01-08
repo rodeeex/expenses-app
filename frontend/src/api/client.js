@@ -2,16 +2,14 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// Создаем экземпляр axios
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // Важно для отправки HTTP-Only cookies
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Флаг для предотвращения множественных запросов на обновление токена
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -27,13 +25,11 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Interceptor для обработки ответов
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Если получили 401 и это не запрос на refresh и не повторный запрос
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (originalRequest.url?.includes('/auth/refresh')) {
         // Если refresh токен невалиден, перенаправляем на логин
@@ -44,7 +40,6 @@ apiClient.interceptors.response.use(
       }
 
       if (isRefreshing) {
-        // Если уже идет процесс обновления токена, добавляем запрос в очередь
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -60,18 +55,15 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Пытаемся обновить токен
         await apiClient.post('/auth/refresh');
         isRefreshing = false;
         processQueue(null, null);
         
-        // Повторяем оригинальный запрос
         return apiClient(originalRequest);
       } catch (refreshError) {
         isRefreshing = false;
         processQueue(refreshError, null);
         
-        // Если не удалось обновить токен, перенаправляем на логин
         window.location.href = '/auth/sign-in';
         return Promise.reject(refreshError);
       }

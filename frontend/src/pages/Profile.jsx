@@ -65,7 +65,6 @@ export const Profile = () => {
     setError('');
     setSuccess('');
 
-    // Проверяем, что хотя бы одно поле заполнено
     if (!formData.username && !formData.password) {
       setError('Заполните хотя бы одно поле для обновления');
       return;
@@ -182,7 +181,6 @@ export const Profile = () => {
                   />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  {/* Пустой блок для выравнивания */}
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField

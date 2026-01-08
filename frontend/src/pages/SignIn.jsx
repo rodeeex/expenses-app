@@ -22,13 +22,10 @@ export const SignIn = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
  // Если уже авторизован, перенаправляем на главную
-  // ВРЕМЕННО: Отключаем редирект для просмотра UI
-  // TODO: Включить обратно когда backend будет готов
-  /*
+
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
-  */
 
   const handleChange = (e) => {
     setFormData({
