@@ -60,7 +60,7 @@ async def get_all_users_with_last_month_expenses(
         )
         .outerjoin(
             Expense,
-            (Expense.user_id == User.id) & (Expense.expense_date >= month_ago),
+            (Expense.user_id == User.id) & (Expense.date >= month_ago),
         )
         .group_by(User.id, User.username)
     )

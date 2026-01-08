@@ -1,9 +1,9 @@
-import apiClient from './client';
+import apiClient from "./client";
 
 export const expensesAPI = {
   // Получить список расходов с фильтрацией
   getExpenses: async (params = {}) => {
-    const response = await apiClient.get('/expenses/', { params });
+    const response = await apiClient.get("/expenses/", { params });
     return response.data;
   },
 
@@ -15,7 +15,7 @@ export const expensesAPI = {
 
   // Создать расход
   createExpense: async (data) => {
-    const response = await apiClient.post('/expenses/', data);
+    const response = await apiClient.post("/expenses/", data);
     return response.data;
   },
 
@@ -33,7 +33,7 @@ export const expensesAPI = {
 
   // Получить статистику
   getStatistics: async (params = {}) => {
-    const response = await apiClient.get('/expenses/statistics/summary', { params });
+    const response = await apiClient.get("/users/", { params });
     return response.data;
   },
 };
