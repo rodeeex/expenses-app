@@ -95,15 +95,11 @@ export const Layout = () => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {menuItems.find((item) => item.path === location.pathname)?.text || 'Expenses App'}
           </Typography>
-          {/* {user && (
+          {user && (
             <Typography variant="body2">
               {user.username}
             </Typography>
           )}
-          РАССКОМЕНТИТЬ КОГДА БУДЕТ ВСЕ ГОТОВО И СЛЕДУЮЩИЕ 3 СТРОЧКИ УДАЛИТЬ */ }
-          <Typography variant="body2">
-            {user ? user.username : 'Demo Mode'} //Чтобы приложение не падало без пользователя
-          </Typography>
         </Toolbar>
       </AppBar>
 
@@ -117,7 +113,7 @@ export const Layout = () => {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better open performance on mobile
+            keepMounted: true,
           }}
           sx={{
             display: { xs: 'block', md: 'none' },
