@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useState } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   AppBar,
   Box,
@@ -15,21 +15,21 @@ import {
   Container,
   useTheme,
   useMediaQuery,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   Receipt as ReceiptIcon,
   Person as PersonIcon,
-} from '@mui/icons-material';
-import { useAuth } from '../hooks/useAuth';
+} from "@mui/icons-material";
+import { useAuth } from "../hooks/useAuth";
 
 const drawerWidth = 240;
 
 const menuItems = [
-  { text: 'Статистика', icon: <DashboardIcon />, path: '/' },
-  { text: 'Мои расходы', icon: <ReceiptIcon />, path: '/me/expenses' },
-  { text: 'Профиль', icon: <PersonIcon />, path: '/me/profile' },
+  { text: "Статистика", icon: <DashboardIcon />, path: "/" },
+  { text: "Мои расходы", icon: <ReceiptIcon />, path: "/me/expenses" },
+  { text: "Профиль", icon: <PersonIcon />, path: "/me/profile" },
 ];
 
 export const Layout = () => {
@@ -37,7 +37,7 @@ export const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { user } = useAuth();
 
   const handleDrawerToggle = () => {
@@ -75,7 +75,7 @@ export const Layout = () => {
   );
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: "flex" }}>
       <AppBar
         position="fixed"
         sx={{
@@ -88,17 +88,28 @@ export const Layout = () => {
             color="inherit"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
+            sx={{ mr: 2, display: { md: "none" } }}
           >
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {menuItems.find((item) => item.path === location.pathname)?.text || 'Expenses App'}
+            {menuItems.find((item) => item.path === location.pathname)?.text ||
+              "Expenses App"}
           </Typography>
           {user && (
-            <Typography variant="body2">
-              {user.username}
-            </Typography>
+            <Box
+              onClick={() => handleNavigate("/me/profile")}
+              sx={{
+                cursor: "pointer",
+                "&:hover": {
+                  textDecoration: "underline",
+                },
+              }}
+            >
+              <Typography variant="body2" color="inherit">
+                {user.username}
+              </Typography>
+            </Box>
           )}
         </Toolbar>
       </AppBar>
@@ -116,9 +127,9 @@ export const Layout = () => {
             keepMounted: true,
           }}
           sx={{
-            display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
+            display: { xs: "block", md: "none" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
               width: drawerWidth,
             },
           }}
@@ -130,9 +141,9 @@ export const Layout = () => {
         <Drawer
           variant="permanent"
           sx={{
-            display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
+            display: { xs: "none", md: "block" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
               width: drawerWidth,
             },
           }}
@@ -158,4 +169,3 @@ export const Layout = () => {
     </Box>
   );
 };
-
