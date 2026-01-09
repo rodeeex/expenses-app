@@ -1,0 +1,15 @@
+.idea/
+
+__pycache__/
+*.pyc
+
+*.db
+*.sqlite
+*.sqlite3
+
+.venv/
+venv/
+
+*.egg-info
+build
+uv.lock
