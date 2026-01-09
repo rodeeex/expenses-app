@@ -71,11 +71,13 @@ class ExpenseRead(ExpenseBase):
 
 class ExpenseDeleteResponse(BaseModel):
     id: UUID
-    detail: str = "Expense deleted"
+    detail: str = "Расход удалён"
 
 
 class ExpenseFilterParams(BaseModel):
-    """Параметры фильтрации расходов"""
+    """
+    Параметры фильтрации расходов
+    """
 
     user_id: Optional[UUID] = Field(None, description="Фильтр по ID пользователя")
     category: Optional[ExpenseCategory] = Field(None, description="Фильтр по категории")
@@ -91,7 +93,9 @@ class ExpenseFilterParams(BaseModel):
 
 
 class ExpenseStatisticsResponse(BaseModel):
-    """Статистика по расходам"""
+    """
+    Статистика по расходам
+    """
 
     total_amount: float = Field(..., description="Общая сумма расходов")
     count: int = Field(..., description="Количество расходов")
@@ -106,7 +110,9 @@ class ExpenseStatisticsResponse(BaseModel):
 
 
 class UserExpenseSummary(BaseModel):
-    """Сводка расходов пользователя за период"""
+    """
+    Сводка расходов пользователя за определённый период
+    """
 
     user_id: UUID
     username: str

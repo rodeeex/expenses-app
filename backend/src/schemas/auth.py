@@ -4,7 +4,9 @@ from pydantic import BaseModel, Field
 
 
 class TokenResponse(BaseModel):
-    """Ответ с токенами доступа"""
+    """
+    Ответ с токенами доступа
+    """
 
     access_token: str = Field(..., description="JWT токен доступа")
     refresh_token: str = Field(
@@ -14,7 +16,9 @@ class TokenResponse(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    """Запрос на авторизацию"""
+    """
+    Запрос на авторизацию
+    """
 
     username: str = Field(
         ..., min_length=3, max_length=32, description="Имя пользователя"
@@ -23,13 +27,17 @@ class LoginRequest(BaseModel):
 
 
 class RefreshTokenRequest(BaseModel):
-    """Запрос на обновление токена"""
+    """
+    Запрос на обновление токена
+    """
 
     refresh_token: str = Field(..., description="Refresh токен для обновления")
 
 
 class LogoutResponse(BaseModel):
-    """Ответ на выход из аккаунта"""
+    """
+    Ответ на выход из аккаунта
+    """
 
     detail: str = Field(
         default="Successfully logged out", description="Сообщение об успешном выходе"

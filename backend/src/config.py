@@ -1,7 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-# TODO: move KEY_DEFAULT to env file and rename
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
