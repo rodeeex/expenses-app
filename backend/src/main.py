@@ -1,4 +1,3 @@
-import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -10,7 +9,11 @@ app = FastAPI(
     version="1.0.0",
 )
 
-origins = ["*"]
+origins = [
+    "http://localhost:5173",
+    "http://localhost",
+    "https://expenses.rodex-itmo.ru",
+]
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,8 +23,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# Подключение роутеров
 app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(expense.router)
