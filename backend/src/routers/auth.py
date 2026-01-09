@@ -158,7 +158,7 @@ async def refresh_token(
         key="access_token",
         value=new_access_token,
         httponly=True,
-        secure=True,
+        secure=False,
         samesite="lax",
         max_age=1800,
     )

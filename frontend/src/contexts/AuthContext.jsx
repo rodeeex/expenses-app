@@ -15,7 +15,9 @@ export const AuthProvider = ({ children }) => {
       const userData = await usersAPI.getCurrentUser();
       setUser(userData);
     } catch (error) {
-      console.error("Auth check failed:", error);
+      if (error.message !== "AUTH_REQUIRED") {
+        console.error("Auth check failed:", error);
+      }
       setUser(null);
     } finally {
       setLoading(false);
