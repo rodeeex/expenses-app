@@ -10,7 +10,10 @@ from sqlalchemy.types import CHAR, TypeDecorator
 
 
 class GUID(TypeDecorator):
-    """UUID для SQLite: храним как CHAR(36)."""
+    """
+    UUID для SQLite
+    """
+
     impl = CHAR(36)
     cache_ok = True
 

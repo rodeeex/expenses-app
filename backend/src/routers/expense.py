@@ -190,7 +190,7 @@ async def update_expense(
     """
     Обновить расход
 
-    Обновляет расход. Пользователь может обновлять только свои расходы.
+    Пользователь может обновлять только свои расходы.
     """
     expense = await expense_service.get_expense_by_id(db, expense_id)
     if expense.user_id != current_user_id:
@@ -238,7 +238,7 @@ async def delete_expense(
     """
     Удалить расход
 
-    Удаляет расход. Пользователь может удалять только свои расходы.
+    Пользователь может удалять только свои расходы.
     """
     expense = await expense_service.get_expense_by_id(db, expense_id)
     if expense.user_id != current_user_id:

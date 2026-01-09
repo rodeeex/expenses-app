@@ -1,53 +1,39 @@
-import { createContext, useState, useEffect } from 'react';
-import { authAPI } from '../api/auth';
-import { usersAPI } from '../api/users';
+import { createContext, useContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { authAPI } from "../api/auth";
+import { usersAPI } from "../api/users";
 
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
+  const navigate = useNavigate();
 
   const checkAuth = async () => {
     try {
       const userData = await usersAPI.getCurrentUser();
       setUser(userData);
-      setIsAuthenticated(true);
-    } catch {
+    } catch (error) {
+      console.error("Auth check failed:", error);
       setUser(null);
-      setIsAuthenticated(false);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
   const login = async (username, password) => {
     try {
       await authAPI.login(username, password);
       await checkAuth();
-      return { success: true };
+      navigate("/");
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.detail || 'Ошибка входа',
-      };
-    }
-  };
-
-  const register = async (username, password) => {
-    try {
-      await authAPI.register(username, password);
-      return await login(username, password);
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.detail || 'Ошибка регистрации',
-      };
+      console.error("Login failed:", error);
+      throw error;
     }
   };
 
@@ -55,36 +41,36 @@ export const AuthProvider = ({ children }) => {
     try {
       await authAPI.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     } finally {
       setUser(null);
-      setIsAuthenticated(false);
+      navigate("/auth/sign-in", { replace: true });
     }
   };
 
-  const updateUser = async (data) => {
+  const register = async (username, password) => {
     try {
-      const updatedUser = await usersAPI.updateCurrentUser(data);
-      setUser(updatedUser);
-      return { success: true };
+      await authAPI.register(username, password);
+      await login(username, password);
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.detail || 'Ошибка обновления профиля',
-      };
+      console.error("Registration or login failed:", error);
+      throw error;
     }
   };
 
-  const value = {
-    user,
-    loading,
-    isAuthenticated,
-    login,
-    register,
-    logout,
-    updateUser,
-    checkAuth,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        loading,
+        login,
+        logout,
+        register,
+        refetch: checkAuth,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };

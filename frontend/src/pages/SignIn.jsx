@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, Link as RouterLink, Navigate } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate, Link as RouterLink, Navigate } from "react-router-dom";
 import {
   Container,
   Box,
@@ -9,19 +9,19 @@ import {
   Link,
   Alert,
   Paper,
-} from '@mui/material';
-import { useAuth } from '../hooks/useAuth';
+} from "@mui/material";
+import { useAuth } from "../hooks/useAuth";
 
 export const SignIn = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
-    username: '',
-    password: '',
+    username: "",
+    password: "",
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
- // Если уже авторизован, перенаправляем на главную
+  // Если уже авторизован, перенаправляем на главную
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -32,25 +32,25 @@ export const SignIn = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
-    setError('');
+    setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       const result = await login(formData.username, formData.password);
-      
+
       if (result.success) {
-        navigate('/');
+        navigate("/");
       } else {
         setError(result.error);
       }
     } catch (err) {
-      console.error('Login error:', err);
-      setError('Произошла ошибка при входе');
+      console.error("Login error:", err);
+      setError("Произошла ошибка при входе");
     } finally {
       setLoading(false);
     }
@@ -61,16 +61,16 @@ export const SignIn = () => {
       <Box
         sx={{
           marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
         }}
       >
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
+        <Paper elevation={3} sx={{ p: 4, width: "100%" }}>
           <Typography component="h1" variant="h5" align="center" gutterBottom>
             Вход
           </Typography>
-          
+
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
@@ -111,7 +111,7 @@ export const SignIn = () => {
               sx={{ mt: 3, mb: 2 }}
               disabled={loading}
             >
-              {loading ? 'Вход...' : 'Войти'}
+              {loading ? "Вход..." : "Войти"}
             </Button>
             <Box textAlign="center">
               <Link component={RouterLink} to="/auth/sign-up" variant="body2">

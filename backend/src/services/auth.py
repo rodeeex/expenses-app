@@ -17,7 +17,6 @@ from src.models.refresh_token import RefreshToken
 from src.models.user import User
 from src.schemas.user import UserCreate
 
-# Argon2 хешер
 ph = PasswordHasher()
 
 

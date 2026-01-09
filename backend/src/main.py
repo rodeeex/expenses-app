@@ -9,11 +9,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-origins = [
-    "http://localhost:5173",
-    "http://localhost",
-    "https://expenses.rodex-itmo.ru",
-]
+origins = ["http://localhost:5173", "http://localhost"]
 
 app.add_middleware(
     CORSMiddleware,
